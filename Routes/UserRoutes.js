@@ -1,10 +1,11 @@
 const express=require('express')
-const { registerUser, authUser,forgetPassword,resetPassword,getUsers, verifyEmail, getUserData, logout, verifyUser, getReferrals, verifyWhatsAppOTP, updateUserProfile } = require('../Controllers/UserControllers')
+const { registerUser, authUser,forgetPassword,resetPassword,getUsers, verifyEmail, getUserData,getLiveUsersCount, logout, verifyUser, getReferrals, verifyWhatsAppOTP, updateUserProfile } = require('../Controllers/UserControllers')
 const { isAuthenticated } = require('../Helpers/JWT_Auth')
 // const { verifyOTP, verifyWhatsappOtp, whatsappResponse } = require('../Helpers/Twilio')
 const router=express.Router()
 
 router.route('/').post(registerUser).get(isAuthenticated,getUsers)
+router.get('/live-users-count',getLiveUsersCount)
 router.get('/profile/:userid',isAuthenticated,getUserData)
 router.put('/update/:userId',isAuthenticated,updateUserProfile)
 router.post('/login',authUser)

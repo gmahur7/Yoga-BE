@@ -1,6 +1,7 @@
 const secretKey = process.env.JWT_KEY
 const JWT = require('jsonwebtoken');
 const UserModel = require('../Models/UserModel');
+const Admin = require('../Models/AdminModel');
 
 const generateToken = (id) => {
   return JWT.sign({ id }, secretKey, { expiresIn: '1h' },)
@@ -28,8 +29,9 @@ const isAuthenticated = async (req, res, next) => {
     // console.log("dec", decoded);
 
     const user = await UserModel.findById(decoded.id).select('-password');
+    const admin = await Admin.findById(decoded.id).select('-password');
 
-    if (!user) {
+    if (!user  && !admin) {
       return res.status(401).json({ success: false, message: 'User not found.' });
   }
 

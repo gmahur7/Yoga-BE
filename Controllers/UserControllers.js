@@ -320,14 +320,17 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-    const currentUser = req.user;
+    // console.log("avil")
     try {
-        const users = await UserModel.find({ username: { $ne: currentUser.username } }, { _id: 1, username: 1, email: 1 })
-        // console.log(users)
+        const users = await UserModel.find({}).select("-password")
+        const verified = await UserModel.find({ isWhatsAppVerified: true })
+
         return res.status(200).send({
             success: true,
-            users
+            users,
+            verified: verified.length
         })
+
     } catch (error) {
         console.log(error)
         return res.status(500).send({
@@ -508,6 +511,32 @@ const getReferrals = asyncHandler(async (req, res) => {
     }
 })
 
+const getLiveUsersCount = asyncHandler(async (req, res) => {
+
+    try {
+        const users = await User.find()
+
+        if (!users.length > 0) {
+            return res.status(404).send({
+                success: false,
+                error: "No Live Users Found"
+            })
+        }
+
+        return res.status(200).send({
+            success: true,
+            count: users.length
+        })
+
+    } catch (error) {
+        console.log("Error in getting live user count: ", error)
+        res.status(400).send({
+            success: false,
+            error: "Error in getting live user count: " + error
+        })
+    }
+})
+
 const verifyUserWithWhatsApp = async (req, res) => {
     const { username, phoneNumber } = req.body;
 
@@ -638,7 +667,7 @@ const updateUserProfile = async (req, res) => {
         return res.status(200).json({
             success: true,
             message: 'Profile updated successfully!',
-            user:user,
+            user: user,
             referal: refers ? refers : []
         });
     } catch (error) {
@@ -646,6 +675,8 @@ const updateUserProfile = async (req, res) => {
         return res.status(500).json({ success: false, message: 'Server error!' });
     }
 };
+
+
 
 
 module.exports = {
@@ -662,4 +693,5 @@ module.exports = {
     verifyUserWithWhatsApp,
     verifyWhatsAppOTP,
     updateUserProfile,
+    getLiveUsersCount
 }
