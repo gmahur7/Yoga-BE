@@ -10,10 +10,22 @@ const sendOTPEmail = require("../Helpers/NodeMailer")
 // const { sendOTPSMS, sendWhatsAppOTP } = require("../Helpers/Twilio")
 
 
-
-// Todo: Fix this gencode
 const genCode = (user) => {
-    return user + "abc"
+    const username = user.split("").filter((value) => value !== " ").join("");
+    const randomStr = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    const len = 5;
+
+    let str = ""
+
+    for (let i = 0; i < len; i++) {
+        str += randomStr[Math.floor(Math.random() * randomStr.length)];
+    }
+
+    let output = username + "_" + str;
+
+    console.log(output)
+
+    return output
 }
 
 const registerUser = asyncHandler(async (req, res) => {
