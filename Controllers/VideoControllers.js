@@ -9,8 +9,6 @@ const sourceChange = (video)=>{
 const registerVideo = asyncHandler(async (req, res) => {
     const { title, source, category,description } = req.body
 
-    // console.log(req.body)
-
     if (!title  || !category ) {
         return res.status(400).json({
             success: false,
