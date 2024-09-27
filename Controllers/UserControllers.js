@@ -3,12 +3,29 @@ const bcrypt = require('bcryptjs')
 const otpGenerator = require('otp-generator')
 const User = require('../Models/UserModel')
 const { generateToken } = require('../Helpers/JWT_Auth')
-const domain = process.env.DOMAIN || `http://localhost:${process.env.PORT}`
+// const domain = process.env.DOMAIN || `http://localhost:${process.env.PORT}`
+const domain = process.env.CLIENT_URL || "http://localhost:5173"
 const crypto = require('crypto');
 const UserModel = require("../Models/UserModel")
 const sendOTPEmail = require("../Helpers/NodeMailer")
-// const { sendOTPSMS, sendWhatsAppOTP } = require("../Helpers/Twilio")
+const QRCode = require('qrcode');
+const path=require('path')
+const qrcodeDir = path.join(__dirname,'../','qrcodes')
 
+const genQRCode = (link,code) => {
+    QRCode.toFile(`${qrcodeDir}/${code}_qrcode.png`, link, {
+        color: {
+            dark: '#000000', 
+            light: '#FFFFFF'  
+        }
+    }, function (err) {
+        if (err) {
+            console.log('Error occurred:', err);
+        } else {
+            console.log('QR code saved to qrcode.png');
+        }
+    });
+}
 
 const genCode = (user) => {
     const username = user.split("").filter((value) => value !== " ").join("");
@@ -22,8 +39,6 @@ const genCode = (user) => {
     }
 
     let output = username + "_" + str;
-
-    console.log(output)
 
     return output
 }
@@ -141,6 +156,8 @@ const authUser = asyncHandler(async (req, res) => {
         // console.log(user)
         if (!user) {
             const referCode = genCode(name);
+            genQRCode(`${domain}/login/${referCode}#register`,referCode)
+
             user = await User.create({
                 phoneNumber,
                 username: name,
@@ -151,7 +168,8 @@ const authUser = asyncHandler(async (req, res) => {
                     count: 0
                 },
                 isFirstLogin: false,
-                isFirstPayment: true
+                isFirstPayment: true,
+                qrcode:referCode+"_qrcode.png"
             })
 
             if (referal) {

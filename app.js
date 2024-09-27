@@ -2,6 +2,7 @@ require('dotenv').config()
 const express = require('express')
 const mongoDBConnect = require('./Database/dbConnect')
 const app = express()
+const path=require('path')
 mongoDBConnect()
 const domain=process.env.DOMAIN
 
@@ -31,6 +32,7 @@ app.use(express.json())
 
 app.use(cors(corsOptions));
 
+app.use(express.static(path.join(__dirname,'qrcodes')));
 
 app.get('/', (req, resp) => {
     resp.send('Hello World')
