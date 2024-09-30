@@ -6,21 +6,23 @@ const { generateToken } = require('../Helpers/JWT_Auth')
 // const domain = process.env.DOMAIN || `http://localhost:${process.env.PORT}`
 const domain = process.env.CLIENT_URL || "http://localhost:5173"
 const crypto = require('crypto');
+const jwt = require('jsonwebtoken');
 const UserModel = require("../Models/UserModel")
 const sendOTPEmail = require("../Helpers/NodeMailer")
 const QRCode = require('qrcode');
-const path=require('path')
-const qrcodeDir = path.join(__dirname,'../','qrcodes')
+const path = require('path')
+const moment = require("moment")
+const qrcodeDir = path.join(__dirname, '../', 'qrcodes')
 
-const genQRCode = (link,code) => {
+const genQRCode = (link, code) => {
     QRCode.toFile(`${qrcodeDir}/${code}_qrcode.png`, link, {
         color: {
-            dark: '#000000', 
-            light: '#FFFFFF'  
+            dark: '#000000',
+            light: '#FFFFFF'
         }
     }, function (err) {
         if (err) {
-            console.log('Error occurred:', err);
+            console.error('Error occurred:', err);
         } else {
             console.log('QR code saved to qrcode.png');
         }
@@ -57,8 +59,6 @@ const registerUser = asyncHandler(async (req, res) => {
     try {
 
         const referal = await User.findOne({ "refers.code": referCode })
-
-        // console.log(referal)
 
         const userExits = await User.findOne({ phoneNumber })
         if (userExits) {
@@ -153,10 +153,9 @@ const authUser = asyncHandler(async (req, res) => {
         user = await User.findOne({ phoneNumber })
         const referal = await User.findOne({ "refers.code": code })
 
-        // console.log(user)
         if (!user) {
             const referCode = genCode(name);
-            genQRCode(`${domain}/login/${referCode}#register`,referCode)
+            genQRCode(`${domain}/login/${referCode}#register`, referCode)
 
             user = await User.create({
                 phoneNumber,
@@ -169,7 +168,7 @@ const authUser = asyncHandler(async (req, res) => {
                 },
                 isFirstLogin: false,
                 isFirstPayment: true,
-                qrcode:referCode+"_qrcode.png"
+                qrcode: referCode + "_qrcode.png"
             })
 
             if (referal) {
@@ -208,12 +207,15 @@ const authUser = asyncHandler(async (req, res) => {
 
         const userDetails = await UserModel.findById(user._id).select('-password')
         const refers = await UserModel.find({ referBy: user._id })
+        const liveusers = (await UserModel.find()).length
 
         return res.status(200).json({
             success: true,
             user: userDetails,
             token,
-            referal: refers ? refers : []
+            referal: refers ? refers : [],
+            count: liveusers,
+            referBy: referal ? referal._id : null
         })
 
     } catch (error) {
@@ -290,7 +292,7 @@ const forgetPassword = asyncHandler(async (req, res) => {
 
         res.status(200).json({ success: true, data: 'Email sent' });
     } catch (err) {
-        console.log(err);
+        console.error(err);
         user.resetPasswordToken = undefined;
         user.resetPasswordExpire = undefined;
 
@@ -350,7 +352,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 const getUsers = asyncHandler(async (req, res) => {
-    // console.log("avil")
+
     try {
         const users = await UserModel.find({}).select("-password")
         const verified = await UserModel.find({ isWhatsAppVerified: true })
@@ -362,7 +364,7 @@ const getUsers = asyncHandler(async (req, res) => {
         })
 
     } catch (error) {
-        console.log(error)
+        console.error(error)
         return res.status(500).send({
             success: false,
             error: "server error"
@@ -372,7 +374,7 @@ const getUsers = asyncHandler(async (req, res) => {
 
 const verifyEmail = asyncHandler(async (req, res) => {
     const { email, otp, username } = req.body;
-    console.log(req.body)
+
     try {
         if (!email || !otp || !username) {
             return res.send({
@@ -381,7 +383,7 @@ const verifyEmail = asyncHandler(async (req, res) => {
             })
         }
         const user = await User.findOne({ email, username });
-        // console.log(user)
+
         if (!user) {
             return res.send({
                 success: false,
@@ -389,8 +391,8 @@ const verifyEmail = asyncHandler(async (req, res) => {
             })
         }
 
-        const parsedOtp = Number.parseInt(otp); // Use a new variable for parsed OTP
-        // console.log(user.otp !== parsedOtp)
+        const parsedOtp = Number.parseInt(otp);
+
         if (user.emailVerificationOTP !== parsedOtp) {
             return res.status(400).send({
                 success: false,
@@ -473,7 +475,7 @@ const getUserData = asyncHandler(async (req, res) => {
         })
 
     } catch (error) {
-        console.log("Error in getting user data: ", error)
+        console.error("Error in getting user data: ", error)
         res.status(400).send({
             success: false,
             error: "Error in getting user data: " + error
@@ -482,31 +484,36 @@ const getUserData = asyncHandler(async (req, res) => {
 })
 
 const verifyUser = async (req, res) => {
-    const token = req.cookies.access_token;
+    let token;
+    const authHeader = req.header('Authorization');
 
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7);
+    }
+    // console.log("token: ",token)
     if (!token) {
         return res.status(401).json({ success: false, error: 'Access denied. No token provided.' });
     }
 
     try {
         // Verify the token
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token, process.env.JWT_KEY);
 
-        const user = await User.findById(decoded.id);
+        const user = await User.findById(decoded.id).select("-password");
 
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
-
-        // Assuming the decoded token contains the user information
-        return res.status(200).json({ success: true, user: decoded });
+        
+        return res.status(200).json({ success: true, user: user });
     } catch (error) {
+        console.log(error)
         return res.status(400).json({ success: false, error: 'Invalid token.' });
     }
 };
 
 const getReferrals = asyncHandler(async (req, res) => {
-    console.log(req.user)
+
     const currentUser = req.user;
     if (!currentUser) {
         return res.status(404).send({
@@ -529,11 +536,12 @@ const getReferrals = asyncHandler(async (req, res) => {
 
         return res.status(200).send({
             success: true,
-            users: users
+            users: users,
+            points: currentUser.refers.points
         })
 
     } catch (error) {
-        console.log("Error in getting referrals user data: ", error)
+        console.error("Error in getting referrals user data: ", error)
         res.status(400).send({
             success: false,
             error: "Error in getting referrals user data: " + error
@@ -559,7 +567,7 @@ const getLiveUsersCount = asyncHandler(async (req, res) => {
         })
 
     } catch (error) {
-        console.log("Error in getting live user count: ", error)
+        console.error("Error in getting live user count: ", error)
         res.status(400).send({
             success: false,
             error: "Error in getting live user count: " + error
@@ -706,6 +714,47 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+const addPayment = async (req, res) => {
+    const { user, amount, duration, paymentType } = req.body;
+
+    if (!amount || !duration || !paymentType ||!user) {
+        return res.status(400).json({ success: false, error: 'Please provide all the details: amount, duration, and paymentType.' });
+    }
+
+    try {
+        // Fetch the user from the database
+        const foundUser = await User.findById(user._id).select("-password");
+
+        if (!foundUser) {
+            return res.status(404).json({ success: false, error: 'User not found.' });
+        }
+
+        // Calculate next payment date based on the payment duration and type
+        const now = new Date();
+        const nextPaymentDate = moment(now).add(duration, 'months').toDate();
+
+        // Update user payment details
+        foundUser.isFirstPayment = false;  // Mark first payment as done
+        foundUser.paymentType = paymentType;
+        foundUser.paymentDate = now;
+        foundUser.nextPaymentDate = nextPaymentDate;
+
+        await foundUser.save();
+
+        return res.status(200).json({
+            success: true,
+            message: 'Payment added successfully',
+            user: foundUser,
+        });
+    } catch (error) {
+        console.error('Error adding payment:', error);
+        return res.status(500).json({
+            success: false,
+            error: 'Failed to add payment',
+            error: error.message,
+        });
+    }
+};
 
 
 
@@ -723,5 +772,6 @@ module.exports = {
     verifyUserWithWhatsApp,
     verifyWhatsAppOTP,
     updateUserProfile,
-    getLiveUsersCount
+    getLiveUsersCount,
+    addPayment
 }

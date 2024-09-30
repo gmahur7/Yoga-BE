@@ -2,9 +2,22 @@ require('dotenv').config()
 const express = require('express')
 const mongoDBConnect = require('./Database/dbConnect')
 const app = express()
+const { setupSocket } =require('./socket') 
 const path=require('path')
 mongoDBConnect()
 const domain=process.env.DOMAIN
+
+const {Server}=require('socket.io')
+const {createServer}=require('http')
+const server = createServer(app)
+const io=new Server(server,{
+    cors:{
+        origin:'*'
+    }
+})
+
+setupSocket(io)
+module.exports= {io}
 
 const adminRoutes = require('./Routes/AdminRoutes')
 const userRoutes = require('./Routes/UserRoutes')
@@ -45,6 +58,6 @@ app.use("/api/payment" ,paymentRoutes)
 app.use("/api/faqs" ,isAuthenticated,FAQRoutes)
 app.use("/api/videos" ,isAuthenticated,videoRoutes)
 
-app.listen(port, () => {
+server.listen(port, () => {
     console.log("Server Is Running At " + port)
 })

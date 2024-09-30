@@ -73,11 +73,11 @@ const userSchema = new mongoose.Schema({
             type: String,
             required: true
         },
-        points:{
+        points: {
             type: Number,
             default: 0
         },
-        count:{
+        count: {
             type: Number,
             default: 0
         }
@@ -91,22 +91,26 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
-    isFirstPayment:{
-        type:Boolean,
-        default:true
+    isFirstPayment: {
+        type: Boolean,
+        default: true
+    },
+    paymentType: {
+        type: String,
+        default: 'Free',
     },
     paymentDate: {
         type: Date,
         default: Date.now(),
-      },
-      nextPaymentDate: {
+    },
+    nextPaymentDate: {
         type: Date,
         default: function () {
-          const now = new Date();
-          now.setDate(now.getDate() + 7);
-          return now;
+            const now = new Date();
+            now.setDate(now.getDate() + 7);
+            return now;
         },
-      },
+    },
 }, {
     timestamps: true
 });

@@ -4,7 +4,6 @@ const videoSchema = new mongoose.Schema({
     title: {
         type: String,
         required: [true, "Title is required."],
-        unique: true,
         trim: true,
     },
     source: {
@@ -15,9 +14,7 @@ const videoSchema = new mongoose.Schema({
     },
     description: {
         type: String,
-        unique: true,
         trim: true,
-        // required: [true, "description is required."],
     },
     category:{
         type:String,

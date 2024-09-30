@@ -1,5 +1,6 @@
 const asyncHandler = require("express-async-handler");
 const Admin = require("../Models/AdminModel");
+const jwt = require('jsonwebtoken')
 const { generateToken } = require("../Helpers/JWT_Auth");
 
 const authAdmin = asyncHandler(async (req, res) => {
@@ -49,6 +50,35 @@ const authAdmin = asyncHandler(async (req, res) => {
     }
 })
 
+const verifyAdmin = async (req, res) => {
+    let token;
+    const authHeader = req.header('Authorization');
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.slice(7);
+
+        if (!token) {
+            return res.status(401).json({ success: false, error: 'Access denied. No token provided.' });
+        }
+
+        try {
+            // Verify the token
+            const decoded = jwt.verify(token, process.env.JWT_KEY);
+
+            const admin = await Admin.findById(decoded.id).select("-password");
+
+            if (!admin) {
+                return res.status(404).json({ success: false, error: 'Admin not found' });
+            }
+
+            return res.status(200).json({ success: true, admin: admin });
+        } catch (error) {
+            return res.status(400).json({ success: false, error: 'Invalid token.' });
+        }
+    }
+};
+
 module.exports = {
-    authAdmin
+    authAdmin,
+    verifyAdmin
 }
