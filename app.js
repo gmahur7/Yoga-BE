@@ -17,7 +17,7 @@ const io=new Server(server,{
 })
 
 setupSocket(io)
-module.exports= {io}
+// module.exports= {io}
 
 const adminRoutes = require('./Routes/AdminRoutes')
 const userRoutes = require('./Routes/UserRoutes')
