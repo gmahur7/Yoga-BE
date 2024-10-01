@@ -5,7 +5,6 @@ const app = express()
 const { setupSocket } =require('./socket') 
 const path=require('path')
 mongoDBConnect()
-const domain=process.env.DOMAIN
 
 const {Server}=require('socket.io')
 const {createServer}=require('http')
