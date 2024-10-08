@@ -1,155 +1,334 @@
-const Razorpay = require('razorpay');
-const crypto = require('crypto');
-const PaymentModel = require("../Models/Payments");
+const instamojo = require('@api/instamojo');
 const User = require('../Models/UserModel');
+const PaymentModel = require('../Models/Payments');
+const moment = require("moment");
+const UserModel = require('../Models/UserModel');
 
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID || " ",
-    key_secret: process.env.RAZORPAY_KEY_SECRET || " ",
-});
+const getPaymentToken = async (req, res) => {
 
-exports.createOrder = async (req, res) => {
-    const { amount, currency, phoneNumber, duration, points } = req.body;
-    // console.log(req.body)
-    try {
-        // Check if user exists, if not create a new user
-        let user = await User.findOne({ phoneNumber });
-        if (!user) {
-            return res.json({
-                success: false,
-                message: "User Not Found"
-            })
-        }
+  const { phoneNumber } = req.body;
+  const user = await User.findOne({ phoneNumber });
 
-        if (points) {
-            if (user.refers.points < points) {
-                return res.json({
-                    success: false,
-                    message: "Not Enough Points"
-                })
-            }
-        }
+  if (!user) {
+    return res.status(404).send({
+      success: false,
+      error: "User not found",
+    });
+  }
+  try {
 
-        const options = {
-            amount: amount * 100, // Razorpay expects amount in paise
-            currency,
-            receipt: 'receipt_' + Math.random().toString(36).substring(7),
-        };
+    // Generate access token
+    // const tokenResponse = await instamojo.generateAccessTokenApplicationBasedAuthentication({
+    //   grant_type: 'client_credentials',
+    //   client_id: process.env.INSTAMOJO_CLIENT_ID,
+    //   client_secret: process.env.INSTAMOJO_CLIENT_SECRET,
+    // });
 
-        const order = await razorpay.orders.create(options);
+    let response = await fetch('https://test.instamojo.com/oauth2/token/', {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: process.env.INSTAMOJO_CLIENT_ID,
+        client_secret: process.env.INSTAMOJO_CLIENT_SECRET,
+      })
+    })
 
-        const newOrder = new PaymentModel({
-            userId: user._id,
-            amount,
-            currency,
-            razorpay_order_id: order.id,
-            status: 'created',
-            duration: duration,
-            points: points
-        });
+    response = await response.json()
 
-        await newOrder.save();
+    // console.log("tokenresp: ", response)
+    const token = response.access_token;
 
-        // console.log(newOrder)
-
-        res.json({
-            order,
-            user: {
-                id: user._id, email: user.email, name: user.username, phoneNumber: user.phoneNumber, duration: newOrder.duration, points: newOrder.points
-            }
-        });
-
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ error: error.description });
+    if (!token) {
+      return res.status(404).send({
+        success: false,
+        error: "Token not found",
+      });
     }
+
+    return res.status(200).send({
+      success: true,
+      message: "Token created successfully",
+      data: token
+    });
+
+  } catch (error) {
+    console.log("error in creating payment token: " + error)
+    return res.status(200).send({
+      success: false,
+      error: error,
+    });
+
+  }
 }
 
-exports.verifyPayment = async (req, res) => {
-    const { duration, razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, points } = req.body;
-    // console.log(req.body)
-    try {
-        const user = await User.findById(userId);
-        if (!user) return res.status(400).json({ error: 'User not found' });
+const createPayment = async (req, res) => {
+  const { amount, phone, email, purpose, token,plan } = req.body;
+  const user = await User.findOne({ phoneNumber: phone });
 
-        const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
-        shasum.update(`${razorpay_order_id}|${razorpay_payment_id}`);
-        const digest = shasum.digest('hex');
+  if (!user) {
+    return res.send({
+      success: false,
+      error: "User not found",
+    });
+  }
 
-        if (digest === razorpay_signature) {
-            let paymentDetail = await PaymentModel.findOneAndUpdate(
-                { razorpay_order_id, userId: user._id },
-                {
-                    razorpay_payment_id,
-                    razorpay_signature,
-                    status: 'paid'
-                }
-            );
-            // console.log(paymentDetail)
+  try {
 
-            let paymentDate = paymentDetail.updatedAt;
-            let nextPaymentDate = new Date();
+    let response = await fetch('https://test.instamojo.com/v2/payment_requests/', {
+      method: "POST",
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `bearer ${token}`
+      },
+      body: JSON.stringify({
+        allow_repeated_payments: false,
+        send_email: true,
+        amount: amount,
+        purpose: purpose,
+        buyer_name: user.username,
+        email: email,
+        phone: user.phone,
+        redirect_url: `${process.env.INSTAMOJO_REDIRECT_URL}/?token=${token}`,
+        webhook: process.env.INSTAMOJO_WEBHOOK_URL,
+        // expires_at: '100',
+      })
+    })
 
-            if (new Date(user.nextPaymentDate) > Date.now()) {
-                nextPaymentDate = new Date(user.nextPaymentDate)
-            }
+    response = await response.json()
 
-            switch (duration) {
-                case 1:
-                    nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
-                    break;
-                case 3:
-                    nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 3);
-                    break;
-                case 12:
-                    nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 12);
-                    break;
-                default:
-                    // If none of the cases match, nextPaymentDate will remain the current date.
-                    break;
-            }
-            let newUpdated;
-            if (points) {
-                newUpdated = await User.findByIdAndUpdate(
-                    { _id: user._id },
-                    {
-                        paymentDate: paymentDate,
-                        nextPaymentDate: nextPaymentDate,
-                        $inc: { "refers.points": -points }, // Decrease the points
-                    },
-                    { new: true }
-                );
-            } else {
-                newUpdated = await User.findByIdAndUpdate(
-                    { _id: user._id },
-                    {
-                        paymentDate: paymentDate,
-                        nextPaymentDate: nextPaymentDate,
-                    },
-                    { new: true }
-                );
-            }
-
-            user.refers = newUpdated.refers;
-
-            if(user.isFirstPayment){
-                await User.findOneAndUpdate({
-                    _id:user.referBy
-                },{
-                    $inc: { "refers.points": 25 }
-                },{
-                    new:true
-                }) 
-                user.isFirstPayment=false;
-                await user.save()
-            }
-
-            res.json({ status: 'ok' });
-        } else {
-            res.status(400).json({ error: 'Invalid signature' });
-        }
-    } catch (error) {
-        console.error("error: " + error)
-        res.status(500).json({ error: error.description });
+    if (!response.id) {
+      return res.status(200).send({
+        success: false,
+        error: response.message,
+      });
     }
+
+    const payment = await PaymentModel.create({
+      userId: user._id,
+      payment_id: response.id,
+      purpose,
+      amount,
+      status: response.status,
+      payment_token: token,
+      plan,
+      duration:12
+    })
+
+    if (!payment) {
+      return res.status(200).send({
+        success: false,
+        error: 'Failed to create payment',
+      });
+    }
+
+    return res.status(200).send({
+      success: true,
+      data: response.longurl,
+    });
+
+  } catch (err) {
+    console.log(err);
+    return res.send({
+      success: false,
+      error: err,
+    });
+  }
+};
+
+const checkstatus = async (req, res) => {
+  const { payment_request_id, token } = req.query
+  // console.log("query: ", payment_request_id, token)
+
+  const payment = await PaymentModel.findOne({
+    payment_id: payment_request_id
+  })
+
+  if (!payment) {
+    return res.send({
+      success: false,
+      error: 'Payment not found',
+    });
+  }
+
+  const user = await UserModel.findOne({
+    _id:payment.userId
+  })
+
+  if (!payment) {
+    return res.send({
+      success: false,
+      error: 'User not found',
+    });
+  }
+
+  try {
+
+    let response = await fetch(`https://test.instamojo.com/v2/payment_requests/${payment_request_id}`, {
+      method: "GET",
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `bearer ${token}`
+      },
+    })
+
+    response = await response.json()
+
+    if (response.success === false) {
+      return res.redirect(process.env.PAYMENT_FAILURE_URL)
+      // return res.send({
+      //   success: false,
+      //   error: response.message,
+      // });
+    }
+
+    if (response.status === 'Pending') {
+      return res.redirect(process.env.PAYMENT_FAILURE_URL)
+    }
+
+    payment.status = 'Completed'
+    await payment.save()
+
+    const now = new Date();
+    const nextPaymentDate = moment(now).add(12, 'months').toDate();
+
+    // Update user payment details
+    user.isFirstPayment = false;
+    user.paymentType = payment.plan;
+    user.paymentDate = now;
+    user.nextPaymentDate = nextPaymentDate;
+
+    await user.save();
+
+
+
+    return res.redirect(process.env.PAYMENT_SUCCESS_URL)
+    // return res.status(200).send({
+    //   success: true,
+    //   data: response,
+    // });
+
+  } catch (err) {
+    console.log(err);
+    return res.redirect(process.env.PAYMENT_FAILURE_URL)
+    // return res.send({
+    //   success: false,
+    //   error: err,
+    // });
+  }
+};
+
+const getCompletedPayments = async (req, res) => {
+  try {
+    const completedPayments = await PaymentModel.find({ status: "Completed" }).populate('userId'); // Populate user data if necessary
+
+    if (completedPayments.length > 0) {
+      return res.status(200).json({
+        success: true,
+        payments: completedPayments
+      });
+    } else {
+      return res.status(404).json({
+        success: false,
+        message: "No completed payments found"
+      });
+    }
+  } catch (error) {
+    console.error('Error fetching completed payments:', error);
+    return res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
+};
+
+const addPaymentCustom = async (req, res) => {
+  const { user, duration, plan, purpose } = req.body;
+  console.log(req.body)
+
+  if (!duration || !plan || !user || !purpose) {
+    return res.status(400).json({ success: false, error: 'Please provide all the details: duration, plan, and purpose.' });
+  }
+
+  // Define the amount based on the selected plan
+  let amount;
+  switch (plan) {
+    case 'Free':
+      amount = 0;
+      break;
+    case 'Silver':
+      amount = 99;
+      break;
+    case 'Gold I':
+      amount = 23999;
+      break;
+    case 'Gold II':
+      amount = 17999;
+      break;
+    default:
+      return res.status(400).json({ success: false, error: 'Invalid payment plan.' });
+  }
+
+  try {
+    // Fetch the user from the database
+    const foundUser = await User.findById(user._id).select("-password");
+
+    if (!foundUser) {
+      return res.status(404).json({ success: false, error: 'User not found.' });
+    }
+
+    const payment = await PaymentModel.create({
+      userId: foundUser._id,
+      amount,
+      duration,
+      payment_id: 'custom',
+      payment_token: 'custom',
+      purpose,
+      status: 'Completed',
+      plan
+    });
+
+    if (!payment) {
+      return res.status(200).json({
+        success: false,
+        message: 'Payment failed',
+      });
+    }
+
+    const now = new Date();
+    const nextPaymentDate = moment(now).add(duration, 'months').toDate();
+
+    // Update user payment details
+    foundUser.isFirstPayment = false;
+    foundUser.paymentType = plan;
+    foundUser.paymentDate = now;
+    foundUser.nextPaymentDate = nextPaymentDate;
+
+    await foundUser.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Payment added successfully',
+      user: foundUser,
+    });
+
+  } catch (error) {
+    console.error('Error adding payment:', error);
+    return res.status(500).json({
+      success: false,
+      error: 'Failed to add payment',
+      error: error.message,
+    });
+  }
+};
+
+
+module.exports = {
+  getPaymentToken,
+  createPayment,
+  checkstatus,
+  getCompletedPayments,
+  addPaymentCustom
 }

@@ -4,7 +4,7 @@ const UserModel = require('../Models/UserModel');
 const Admin = require('../Models/AdminModel');
 
 const generateToken = (id) => {
-  return JWT.sign({ id }, secretKey, { expiresIn: '1h' },)
+  return JWT.sign({ id }, secretKey, { expiresIn: '1d' },)
 }
 
 const isAuthenticated = async (req, res, next) => {
@@ -36,6 +36,7 @@ const isAuthenticated = async (req, res, next) => {
   }
 
     req.user = user;
+    req.admin = admin;
     next();
 
   } catch (error) {

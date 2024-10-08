@@ -35,7 +35,16 @@ const userSchema = new mongoose.Schema({
     city: {
         type: String,
     },
+    state: {
+        type: String,
+    },
+    country: {
+        type: String,
+    },
     dob: {
+        type: String,
+    },
+    gender: {
         type: String,
     },
     qrcode: {

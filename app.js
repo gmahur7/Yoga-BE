@@ -5,18 +5,22 @@ const app = express()
 const { setupSocket } =require('./socket') 
 const path=require('path')
 mongoDBConnect()
+const domain=process.env.DOMAIN
 
 const {Server}=require('socket.io')
 const {createServer}=require('http')
 const server = createServer(app)
-const io=new Server(server,{
-    cors:{
-        origin:'*'
+
+const io = new Server(server, {
+    cors: {
+      origin: [process.env.CLIENT_URL,process.env.ADMIN_URL],
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+      credentials: true
     }
-})
+  });
 
 setupSocket(io)
-// module.exports= {io}
+module.exports= {io}
 
 const adminRoutes = require('./Routes/AdminRoutes')
 const userRoutes = require('./Routes/UserRoutes')
@@ -33,9 +37,8 @@ const port = process.env.PORT || 5000
 
 const corsOptions = {
     origin: '*',
-    credentials: true, // This allows the server to accept credentials (cookies, headers, etc.)
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    // allowedHeaders: ['Content-Type', 'Authorization']
 };
 
 app.use(cookieParser());
@@ -47,13 +50,13 @@ app.use(cors(corsOptions));
 app.use(express.static(path.join(__dirname,'qrcodes')));
 
 app.get('/', (req, resp) => {
-    resp.send('Hello World')
+    resp.send('Hello World!')
 })
 //---------------------------USER ROUTES------------------------------------------------
 app.use("/api/admin", adminRoutes)
 app.use("/api/user", userRoutes)
-app.use("/api/meet" ,meetRoutes)
-app.use("/api/payment" ,paymentRoutes)
+app.use("/api/meetings" ,meetRoutes)
+app.use("/api/payments" ,paymentRoutes)
 app.use("/api/faqs" ,isAuthenticated,FAQRoutes)
 app.use("/api/videos" ,isAuthenticated,videoRoutes)
 

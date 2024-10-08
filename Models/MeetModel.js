@@ -1,14 +1,13 @@
 const mongoose = require('mongoose')
 
 const meetSchema = new mongoose.Schema({
-    meetId: {
+    meeturl: {
         type: String,
         required: true,
-        unique: true
     },
-    host: { type: mongoose.Schema.ObjectId, ref: 'User' },
-    invitedUsers: [{ type: mongoose.Schema.ObjectId, ref: 'User' }],
-    joinedUsers: [{ type: mongoose.Schema.ObjectId, ref: 'User' }]
+    meetdate:Date,
+    meetname: { type:String },
+    category: { type:String },
 }, {
     timestamps: true,
 })

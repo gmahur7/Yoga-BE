@@ -11,7 +11,6 @@ const UserModel = require("../Models/UserModel")
 const sendOTPEmail = require("../Helpers/NodeMailer")
 const QRCode = require('qrcode');
 const path = require('path')
-const moment = require("moment")
 const qrcodeDir = path.join(__dirname, '../', 'qrcodes')
 
 const genQRCode = (link, code) => {
@@ -504,7 +503,7 @@ const verifyUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({ success: false, error: 'User not found' });
         }
-        
+
         return res.status(200).json({ success: true, user: user });
     } catch (error) {
         console.log(error)
@@ -669,7 +668,7 @@ const verifyWhatsAppOTP = async (req, res) => {
 };
 
 const updateUserProfile = async (req, res) => {
-    const { username, dob, gender, city } = req.body;
+    const { username, dob, gender, city, state, country } = req.body;
     const userId = req.params.userId;
 
     if (!userId) {
@@ -679,7 +678,7 @@ const updateUserProfile = async (req, res) => {
         });
     }
 
-    if (!username || !dob || !gender || !city) {
+    if (!username || !dob || !gender || !city || !state || !country) {
         return res.status(404).json({
             success: false,
             message: 'Please provide all details!'
@@ -691,7 +690,7 @@ const updateUserProfile = async (req, res) => {
         // Update user information
         const updatedUser = await User.findByIdAndUpdate(
             userId,
-            { username, dob, gender, city },
+            { username, dob, gender, city, state, country },
             { new: true, runValidators: true }
         );
 
@@ -714,48 +713,6 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
-const addPayment = async (req, res) => {
-    const { user, amount, duration, paymentType } = req.body;
-
-    if (!amount || !duration || !paymentType ||!user) {
-        return res.status(400).json({ success: false, error: 'Please provide all the details: amount, duration, and paymentType.' });
-    }
-
-    try {
-        // Fetch the user from the database
-        const foundUser = await User.findById(user._id).select("-password");
-
-        if (!foundUser) {
-            return res.status(404).json({ success: false, error: 'User not found.' });
-        }
-
-        // Calculate next payment date based on the payment duration and type
-        const now = new Date();
-        const nextPaymentDate = moment(now).add(duration, 'months').toDate();
-
-        // Update user payment details
-        foundUser.isFirstPayment = false;  // Mark first payment as done
-        foundUser.paymentType = paymentType;
-        foundUser.paymentDate = now;
-        foundUser.nextPaymentDate = nextPaymentDate;
-
-        await foundUser.save();
-
-        return res.status(200).json({
-            success: true,
-            message: 'Payment added successfully',
-            user: foundUser,
-        });
-    } catch (error) {
-        console.error('Error adding payment:', error);
-        return res.status(500).json({
-            success: false,
-            error: 'Failed to add payment',
-            error: error.message,
-        });
-    }
-};
-
 
 
 module.exports = {
@@ -773,5 +730,4 @@ module.exports = {
     verifyWhatsAppOTP,
     updateUserProfile,
     getLiveUsersCount,
-    addPayment
 }

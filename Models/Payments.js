@@ -2,12 +2,12 @@ const { mongoose, Schema } = require("mongoose");
 
 const paymentSchema = new Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    payment_id:String,
+    payment_token:String,
+    purpose:String,
     amount: Number,
-    currency: String,
-    razorpay_order_id: String,
-    razorpay_payment_id: String,
-    razorpay_signature: String,
     status: String,
+    plan: String,
     duration:Number,
     points:Number
   },{
