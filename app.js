@@ -52,6 +52,35 @@ app.use(express.static(path.join(__dirname,'qrcodes')));
 app.get('/', (req, resp) => {
     resp.send('Hello World!')
 })
+
+const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
+
+// Verify webhook signature
+function verifyWebhookSignature(req, res, next) {
+  const signature = req.headers['x-interakt-signature'];
+  const body = JSON.stringify(req.body);
+  const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
+  const digest = hmac.update(body).digest('hex');
+  
+  if (signature === digest) {
+    next();
+  } else {
+    res.status(401).send('Invalid signature');
+  }
+}
+
+// Webhook endpoint to receive messages
+app.post('/webhook', verifyWebhookSignature, (req, res) => {
+  const { messages } = req.body;
+  
+  messages.forEach(message => {
+    console.log(`Received message from ${message.from}: ${message.text.body}`);
+    handleUserResponse(message);
+  });
+  
+  res.sendStatus(200);
+});
+
 //---------------------------USER ROUTES------------------------------------------------
 app.use("/api/admin", adminRoutes)
 app.use("/api/user", userRoutes)

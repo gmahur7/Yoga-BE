@@ -53,18 +53,6 @@ const userSchema = new mongoose.Schema({
     attendence: [],
     resetPasswordToken: String,
     resetPasswordExpire: Date,
-    isEmailVerified: {
-        type: Boolean,
-        default: false
-    },
-    emailVerificationOTP: {
-        type: Number,
-        // required: true
-    },
-    emailVerificationExpiry: {
-        type: Date,
-        // required: true,
-    },
     isWhatsAppVerified: {
         type: Boolean,
         default: false
