@@ -6,8 +6,9 @@ const UserModel = require('../Models/UserModel');
 
 const getPaymentToken = async (req, res) => {
 
-  const { phoneNumber } = req.body;
-  const user = await User.findOne({ phoneNumber });
+  const { phoneNumber,countryCode } = req.body;
+  
+  const user = await User.findOne({ phoneNumber:`${countryCode}${phoneNumber}` });
 
   if (!user) {
     return res.status(404).send({
@@ -16,13 +17,6 @@ const getPaymentToken = async (req, res) => {
     });
   }
   try {
-
-    // Generate access token
-    // const tokenResponse = await instamojo.generateAccessTokenApplicationBasedAuthentication({
-    //   grant_type: 'client_credentials',
-    //   client_id: process.env.INSTAMOJO_CLIENT_ID,
-    //   client_secret: process.env.INSTAMOJO_CLIENT_SECRET,
-    // });
 
     let response = await fetch('https://test.instamojo.com/oauth2/token/', {
       method: "POST",
@@ -38,7 +32,7 @@ const getPaymentToken = async (req, res) => {
 
     response = await response.json()
 
-    // console.log("tokenresp: ", response)
+    console.log("tokenresp: ", response)
     const token = response.access_token;
 
     if (!token) {
@@ -55,7 +49,7 @@ const getPaymentToken = async (req, res) => {
     });
 
   } catch (error) {
-    console.log("error in creating payment token: " + error)
+    console.error("error in creating payment token: " + error)
     return res.status(200).send({
       success: false,
       error: error,
@@ -65,8 +59,8 @@ const getPaymentToken = async (req, res) => {
 }
 
 const createPayment = async (req, res) => {
-  const { amount, phone, email, purpose, token,plan } = req.body;
-  const user = await User.findOne({ phoneNumber: phone });
+  const { amount, phone, email, purpose, token,plan,countryCode } = req.body;
+  const user = await User.findOne({ phoneNumber:`${countryCode}${phone}`  });
 
   if (!user) {
     return res.send({

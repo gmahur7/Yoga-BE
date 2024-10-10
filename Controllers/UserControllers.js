@@ -146,10 +146,10 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 const authUser = asyncHandler(async (req, res) => {
-    const { phoneNumber, name, code } = req.body
+    const { phoneNumber, name, code,countryCode } = req.body
     try {
         let user;
-        user = await User.findOne({ phoneNumber })
+        user = await User.findOne({ phoneNumber:`${countryCode}${phoneNumber}` })
         const referal = await User.findOne({ "refers.code": code })
 
         if (!user) {
@@ -157,7 +157,7 @@ const authUser = asyncHandler(async (req, res) => {
             genQRCode(`${domain}/login/${referCode}#register`, referCode)
 
             user = await User.create({
-                phoneNumber,
+                phoneNumber:`${countryCode}${phoneNumber}`,
                 username: name,
                 referBy: referal ? referal._id : null,
                 refers: {

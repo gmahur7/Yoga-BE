@@ -20,7 +20,7 @@ const io = new Server(server, {
   });
 
 setupSocket(io)
-// module.exports= {io}
+// module.exports= io
 
 const adminRoutes = require('./Routes/AdminRoutes')
 const userRoutes = require('./Routes/UserRoutes')
@@ -54,20 +54,15 @@ app.get('/', (req, resp) => {
 })
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
-const { createHash } = require('node:crypto');
 
 // Verify webhook signature
 function verifyWebhookSignature(req, res, next) {
-  console.log(WEBHOOK_SECRET)
   const signature = req.headers['x-interakt-signature'];
   const body = JSON.stringify(req.body);
+  const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
+  const digest = hmac.update(body).digest('hex');
   
-  const hash = createHash('sha256');
-  hash.update(WEBHOOK_SECRET);
-  hash.update(body);
-  const calculatedSignature = hash.digest('hex');
-  
-  if (signature === calculatedSignature) {
+  if (signature === digest) {
     next();
   } else {
     res.status(401).send('Invalid signature');
@@ -75,7 +70,7 @@ function verifyWebhookSignature(req, res, next) {
 }
 
 // Webhook endpoint to receive messages
-app.post('/webhook', (req, res) => {
+app.post('/webhook', verifyWebhookSignature, (req, res) => {
   const { messages } = req.body;
   
   messages.forEach(message => {
@@ -83,10 +78,7 @@ app.post('/webhook', (req, res) => {
     handleUserResponse(message);
   });
   
-  res.status(200).json({
-    success:true,
-    message:"Webhook working properly"
-  });
+  res.sendStatus(200);
 });
 
 //---------------------------USER ROUTES------------------------------------------------
