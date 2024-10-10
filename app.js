@@ -83,7 +83,10 @@ app.post('/webhook', verifyWebhookSignature, (req, res) => {
     handleUserResponse(message);
   });
   
-  res.sendStatus(200);
+  res.status(200).json({
+    success:true,
+    message:"Webhook working properly"
+  });
 });
 
 //---------------------------USER ROUTES------------------------------------------------
