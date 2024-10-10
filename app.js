@@ -54,15 +54,20 @@ app.get('/', (req, resp) => {
 })
 
 const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
+const { createHash } = require('node:crypto');
 
 // Verify webhook signature
 function verifyWebhookSignature(req, res, next) {
+  console.log(WEBHOOK_SECRET)
   const signature = req.headers['x-interakt-signature'];
   const body = JSON.stringify(req.body);
-  const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
-  const digest = hmac.update(body).digest('hex');
   
-  if (signature === digest) {
+  const hash = createHash('sha256');
+  hash.update(WEBHOOK_SECRET);
+  hash.update(body);
+  const calculatedSignature = hash.digest('hex');
+  
+  if (signature === calculatedSignature) {
     next();
   } else {
     res.status(401).send('Invalid signature');

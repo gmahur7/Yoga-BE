@@ -1,4 +1,4 @@
-const instamojo = require('@api/instamojo');
+// const instamojo = require('@api/instamojo');
 const User = require('../Models/UserModel');
 const PaymentModel = require('../Models/Payments');
 const moment = require("moment");
