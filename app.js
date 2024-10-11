@@ -5,7 +5,10 @@ const app = express()
 const { setupSocket } =require('./socket') 
 const path=require('path')
 mongoDBConnect()
-const domain=process.env.DOMAIN
+const bodyParser = require('body-parser');
+const CryptoJS = require('crypto-js');
+
+app.use(bodyParser.json());
 
 const {Server}=require('socket.io')
 const {createServer}=require('http')
@@ -20,7 +23,7 @@ const io = new Server(server, {
   });
 
 setupSocket(io)
-// module.exports= io
+// module.exports= {io}
 
 const adminRoutes = require('./Routes/AdminRoutes')
 const userRoutes = require('./Routes/UserRoutes')
@@ -57,12 +60,16 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
 
 // Verify webhook signature
 function verifyWebhookSignature(req, res, next) {
-  const signature = req.headers['x-interakt-signature'];
-  const body = JSON.stringify(req.body);
-  const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
-  const digest = hmac.update(body).digest('hex');
+  const receivedHmac = req.headers['interakt-signature'];
+  const dataString = JSON.stringify(req.body);
   
-  if (signature === digest) {
+  function verifyHmac(receivedHmac, dataString, key) {
+    const generatedHmac = CryptoJS.HmacSHA256(dataString, key);
+    const generatedHmacBase64 = "sha256=" + CryptoJS.enc.Hex.stringify(generatedHmac);
+    return generatedHmacBase64 === receivedHmac;
+  }
+
+  if (verifyHmac(receivedHmac, dataString, WEBHOOK_SECRET)) {
     next();
   } else {
     res.status(401).send('Invalid signature');
@@ -72,11 +79,12 @@ function verifyWebhookSignature(req, res, next) {
 // Webhook endpoint to receive messages
 app.post('/webhook', verifyWebhookSignature, (req, res) => {
   const { messages } = req.body;
+  console.log(req.body)
   
-  messages.forEach(message => {
-    console.log(`Received message from ${message.from}: ${message.text.body}`);
-    handleUserResponse(message);
-  });
+  // messages.forEach(message => {
+  //   console.log(`Received message from ${message.from}: ${message.text.body}`);
+  //   handleUserResponse(message);
+  // });
   
   res.sendStatus(200);
 });
