@@ -41,6 +41,15 @@ exports.setupSocket = (io) => {
             }
         });
 
+        socket.on('attendance_marked', ({user,date}) => {
+            const socketId = USERS[user]; 
+            console.log(user,date,socketId)
+            if (socketId) {
+                io.to(socketId).emit('attendance_marked', { date });
+                emitToAllAdmins('attendance_marked', { date: date });
+            }
+        });
+
         socket.on('update profile', (userId) => {
             const socketId = USERS[userId]; 
             if (socketId) {

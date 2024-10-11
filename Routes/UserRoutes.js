@@ -1,5 +1,5 @@
 const express = require('express')
-const { registerUser, authUser, forgetPassword, resetPassword, getUsers, verifyEmail, getUserData, getLiveUsersCount, logout, verifyUser, getReferrals, updateUserProfile } = require('../Controllers/UserControllers')
+const { registerUser, authUser, forgetPassword, resetPassword, getUsers, verifyEmail, getUserData, getLiveUsersCount, logout, verifyUser, getReferrals, updateUserProfile, markAttendance } = require('../Controllers/UserControllers')
 const { isAuthenticated } = require('../Helpers/JWT_Auth')
 const { sendDataToPabbly } = require('../Helpers/Pebbly')
 const { default: axios } = require('axios')
@@ -20,13 +20,15 @@ router.get('/verify', verifyUser)
 router.get('/referrals', isAuthenticated, getReferrals)
 router.post('/forgetpassword', forgetPassword)
 
+router.route('/mark-attendance').post(isAuthenticated,markAttendance)
+
 
 const createCampaign = async () => {
   try {
     const response = await axios.post('https://api.interakt.ai/v1/public/create-campaign/', {
       campaign_name: 'Harsh3 Test',
       campaign_type: 'PublicAPI',
-      template_name: 'copy_of_copy_of_day_2_1',
+      template_name: 'day_2_started_29_sept',
       language_code: 'en'
     }, {
       headers: {
@@ -44,23 +46,23 @@ const createCampaign = async () => {
 
 async function sendWhatsAppMessage(to, message) {
   const camp = createCampaign()
+  console.log(`91${to}`)
   try {
     const response = await axios.post(`${INTERAKT_API_URL}message/`, {
       // "countryCode": "+91",
       // "phoneNumber": "7017308602",
-      "fullPhoneNumber": "917017308602", // Optional, Either fullPhoneNumber or phoneNumber + CountryCode is required
+      "fullPhoneNumber": `91${to}`, // Optional, Either fullPhoneNumber or phoneNumber + CountryCode is required
       "campaignId" : camp, // Not Mandatory
       "callbackData": "some text here",
       "type": "Template",
       "template": {
-          "name": "copy_of_copy_of_day_2_1",
+          "name": "day_2_started_29_sept",
           "languageCode": "en",
           "headerValues": [
             "https://app.tandenspine.io"
         ],
-        "fileName": "file_name.pdf",
         "bodyValues": [
-            "body_variable_value"
+            to
         ]
       }
   }, {
@@ -78,9 +80,10 @@ async function sendWhatsAppMessage(to, message) {
 
 router.post('/verify-whatsapp', async (req, res) => {
   console.log("hii")
-  await sendWhatsAppMessage("+917017308602", "Hello From intrackt and nodejs")
-  res.send("done")
-
+  await sendWhatsAppMessage(req.body.phoneNumber, "Hello From intrackt and nodejs")
+  res.status(200).send({
+    success:true,
+  })
 })
 
 module.exports = router; 

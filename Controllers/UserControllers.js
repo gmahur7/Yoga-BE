@@ -146,10 +146,10 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 const authUser = asyncHandler(async (req, res) => {
-    const { phoneNumber, name, code,countryCode } = req.body
+    const { phoneNumber, name, code, countryCode } = req.body
     try {
         let user;
-        user = await User.findOne({ phoneNumber:`${countryCode}${phoneNumber}` })
+        user = await User.findOne({ phoneNumber: `${countryCode}${phoneNumber}` })
         const referal = await User.findOne({ "refers.code": code })
 
         if (!user) {
@@ -157,7 +157,7 @@ const authUser = asyncHandler(async (req, res) => {
             genQRCode(`${domain}/login/${referCode}#register`, referCode)
 
             user = await User.create({
-                phoneNumber:`${countryCode}${phoneNumber}`,
+                phoneNumber: `${countryCode}${phoneNumber}`,
                 username: name,
                 referBy: referal ? referal._id : null,
                 refers: {
@@ -713,6 +713,59 @@ const updateUserProfile = async (req, res) => {
     }
 };
 
+const markAttendance = async (req, res) => {
+    const { toMarkDate } = req.body;
+    const currentUser = req.user;
+
+    if (!currentUser) {
+        return res.status(404).json({
+            success: false,
+            message: 'User not found!'
+        });
+    }
+
+    if (!toMarkDate) {
+        return res.status(404).json({
+            success: false,
+            message: 'Attendance date to mark not found'
+        });
+    }
+    
+    try {
+        const update = await UserModel.findByIdAndUpdate(
+            currentUser._id, 
+            {
+                $push: { 
+                    attendence: toMarkDate 
+                }
+            },
+            {
+                new: true, 
+                upsert: true 
+            }
+        );
+
+        if(!update){
+            return res.status(400).json({
+                success:false,
+                message:"Attendance marked failed!"
+            })
+        }
+
+        return res.status(200).json({
+            success:true,
+            message:"Attendance marked successfully!"
+        })
+
+    } catch (error) {
+        return res.status(500).json({
+            success:false,
+            message:"Server error",
+            error: error.message
+        })
+    }
+}
+
 
 
 module.exports = {
@@ -730,4 +783,5 @@ module.exports = {
     verifyWhatsAppOTP,
     updateUserProfile,
     getLiveUsersCount,
+    markAttendance
 }
