@@ -11,7 +11,7 @@ router.post('/logout', logout)
 router.get('/verify', verifyUser)
 
 // to verify whatsapp using whatsapp verify button click
-router.put('/verify-whatsapp/:phoneNumber',verifyUserWithWhatsApp)
+router.get('/verify-whatsapp/:phoneNumber',verifyUserWithWhatsApp)
 
 // retrieve all users
 router.get('/live-users-count', getLiveUsersCount)

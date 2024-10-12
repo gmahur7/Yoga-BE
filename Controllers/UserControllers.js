@@ -11,7 +11,7 @@ const UserModel = require("../Models/UserModel")
 const sendOTPEmail = require("../Helpers/NodeMailer")
 const QRCode = require('qrcode');
 const path = require('path')
-const { sendVerifyWhatsAppMessage } = require("../Helpers/Interakt")
+const { sendVerifyWhatsAppMessage, whatsappVerificationSuccess } = require("../Helpers/Interakt")
 const qrcodeDir = path.join(__dirname, '../', 'qrcodes')
 
 const genQRCode = (link, code) => {
@@ -157,6 +157,8 @@ const authUser = asyncHandler(async (req, res) => {
             const referCode = genCode(name);
             genQRCode(`${domain}/login/${referCode}#register`, referCode)
 
+            const whatsappVerificationToken = generateToken(phoneNumber)
+
             user = await User.create({
                 phoneNumber: `${countryCode}${phoneNumber}`,
                 username: name,
@@ -168,8 +170,14 @@ const authUser = asyncHandler(async (req, res) => {
                 },
                 isFirstLogin: false,
                 isFirstPayment: true,
-                qrcode: referCode + "_qrcode.png"
+                qrcode: referCode + "_qrcode.png",
+                whatsappVerificationToken
             })
+
+            //send verification whatsapp message
+            const userPhoneNumber = user.phoneNumber.slice(1, user.phoneNumber)
+            sendVerifyWhatsAppMessage(userPhoneNumber, user.username)
+            // whatsappVerificationSuccess(userPhoneNumber, user.username)
 
             if (referal) {
                 await User.updateOne(
@@ -209,9 +217,6 @@ const authUser = asyncHandler(async (req, res) => {
         const refers = await UserModel.find({ referBy: user._id })
         const liveusers = (await UserModel.find()).length
 
-        //send verification whatsapp message
-        const userPhoneNumber = user.phoneNumber.slice(1,user.phoneNumber)
-        sendVerifyWhatsAppMessage(userPhoneNumber,user.username)
 
         return res.status(200).json({
             success: true,
@@ -590,21 +595,23 @@ const verifyUserWithWhatsApp = async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ phoneNumber });
+        const user = await User.findOne({ phoneNumber:`+${phoneNumber}` });
 
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "User not found"
-            });
+            }); 
         }
 
-        user.isWhatsAppVerified=true
+        user.isWhatsAppVerified = true
         await user.save()
 
-        res.status(200).json({
-            success: true,
-        });
+        //send verification whatsapp message
+        const userPhoneNumber = user.phoneNumber.slice(1, user.phoneNumber)
+        whatsappVerificationSuccess(userPhoneNumber, user.username)
+
+        res.redirect('https://app.tandenspine.io')
 
     } catch (error) {
         console.error("Error in verify User WhatsApp:", error.message);
@@ -727,37 +734,37 @@ const markAttendance = async (req, res) => {
             message: 'Attendance date to mark not found'
         });
     }
-    
+
     try {
         const update = await UserModel.findByIdAndUpdate(
-            currentUser._id, 
+            currentUser._id,
             {
-                $push: { 
-                    attendence: toMarkDate 
+                $push: {
+                    attendence: toMarkDate
                 }
             },
             {
-                new: true, 
-                upsert: true 
+                new: true,
+                upsert: true
             }
         );
 
-        if(!update){
+        if (!update) {
             return res.status(400).json({
-                success:false,
-                message:"Attendance marked failed!"
+                success: false,
+                message: "Attendance marked failed!"
             })
         }
 
         return res.status(200).json({
-            success:true,
-            message:"Attendance marked successfully!"
+            success: true,
+            message: "Attendance marked successfully!"
         })
 
     } catch (error) {
         return res.status(500).json({
-            success:false,
-            message:"Server error",
+            success: false,
+            message: "Server error",
             error: error.message
         })
     }

@@ -44,6 +44,7 @@ const userSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    whatsappVerificationToken:String,
     refers: {
         code: {
             type: String,
