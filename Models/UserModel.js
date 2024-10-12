@@ -15,19 +15,6 @@ const userSchema = new mongoose.Schema({
         trim: true,
         minLength: [10, "User Phone No. must be of 10 Digits."]
     },
-    email: {
-        type: String,
-        // required: [true, "User email is required."],
-        // unique: true,
-        trim: true,
-        lowercase: true,
-        validate: {
-            validator: function (v) {
-                return /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/.test(v);
-            },
-            message: props => `${props.value} is not a valid email address!`
-        }
-    },
     password: {
         type: String,
         // required: [true, "User Password is required."]
@@ -56,14 +43,6 @@ const userSchema = new mongoose.Schema({
     isWhatsAppVerified: {
         type: Boolean,
         default: false
-    },
-    whatsappVerificationOTP: {
-        type: Number,
-        // required: true
-    },
-    whatsappVerificationExpiry: {
-        type: Date,
-        // required: true,
     },
     refers: {
         code: {

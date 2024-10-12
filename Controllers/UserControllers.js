@@ -11,6 +11,7 @@ const UserModel = require("../Models/UserModel")
 const sendOTPEmail = require("../Helpers/NodeMailer")
 const QRCode = require('qrcode');
 const path = require('path')
+const { sendVerifyWhatsAppMessage } = require("../Helpers/Interakt")
 const qrcodeDir = path.join(__dirname, '../', 'qrcodes')
 
 const genQRCode = (link, code) => {
@@ -207,6 +208,10 @@ const authUser = asyncHandler(async (req, res) => {
         const userDetails = await UserModel.findById(user._id).select('-password')
         const refers = await UserModel.find({ referBy: user._id })
         const liveusers = (await UserModel.find()).length
+
+        //send verification whatsapp message
+        const userPhoneNumber = user.phoneNumber.slice(1,user.phoneNumber)
+        sendVerifyWhatsAppMessage(userPhoneNumber,user.username)
 
         return res.status(200).json({
             success: true,
@@ -575,12 +580,12 @@ const getLiveUsersCount = asyncHandler(async (req, res) => {
 })
 
 const verifyUserWithWhatsApp = async (req, res) => {
-    const { username, phoneNumber } = req.body;
+    const { phoneNumber } = req.params;
 
-    if (!username || !phoneNumber) {
+    if (!phoneNumber) {
         return res.status(400).json({
             success: false,
-            message: "Username and Phone Number are required"
+            message: "Phone Number is required"
         });
     }
 
@@ -594,26 +599,18 @@ const verifyUserWithWhatsApp = async (req, res) => {
             });
         }
 
-        // Generate a 6-digit OTP
-        const otp = otpGenerator.generate(6, { upperCaseAlphabets: false, specialChars: false });
-        user.whatsappVerificationOTP = otp;
-        user.whatsappVerificationExpiry = Date.now() + 10 * 60 * 1000;
-
-        await user.save();
-
-        // Send OTP to the user's WhatsApp number
-        await sendWhatsAppOTP(phoneNumber, otp);
+        user.isWhatsAppVerified=true
+        await user.save()
 
         res.status(200).json({
             success: true,
-            message: "OTP sent successfully to your WhatsApp"
         });
 
     } catch (error) {
-        console.error("Error sending WhatsApp OTP:", error.message);
+        console.error("Error in verify User WhatsApp:", error.message);
         res.status(500).json({
             success: false,
-            message: "Failed to send OTP. Please try again."
+            message: "Server error"
         });
     }
 };
