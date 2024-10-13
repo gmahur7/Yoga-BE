@@ -8,8 +8,8 @@ const createCampaign = async () => {
         const response = await axios.post('https://api.interakt.ai/v1/public/create-campaign/', {
             campaign_name: 'Harsh$ Test',
             campaign_type: 'PublicAPI',
-            template_name: 'verify_user',
-            language_code: 'en_GB'
+            template_name: 'user_say_hii',
+            language_code: 'en'
         }, {
             headers: {
                 'Authorization': `Basic ${INTERAKT_API_KEY}`,
@@ -42,8 +42,7 @@ async function sendVerifyWhatsAppMessage(to, username) {
                     username,
                 ],
                 "buttonValues": {
-                    // 0:{"type": "URL", "text": "VERIFY", "url": `https://yoga-be-2.vercel.app/api/user/verify-whatsapp/${to}`}
-                    0:[Number.parseInt(to)]
+                    0: [Number.parseInt(to)]
                 },
             }
         }, {
@@ -66,16 +65,26 @@ async function whatsappVerificationSuccess(to, username) {
             "fullPhoneNumber": to,
             "campaignId": camp,
             "callbackData": "Whatasapp Verification Message",
-            "type": "Template",
-            "template": {
-                "name": "user_verification_success",
-                "languageCode": "en",
-                "headerValues": [
-                    "https://app.tandenspine.io"
-                ],
-                "bodyValues": [
-                    username,
-                ],
+            "type": "InteractiveButton",
+            "data": {
+                "message": {
+                    "type": "button",
+                    "body": {
+                        "text": "Hello "+username+", Your Whatapp Verifiaction is successfull. Welcome to Tanden Spine. \n\n Thank You For Verification. \n \n Start your conversation by clicking the Hi button below."
+                    },
+                    "action": {
+                        "buttons": [
+                            {
+                                "type": "reply",
+                                "reply": {
+                                    "id": "id1",
+                                    "title": "Hi"
+                                }
+                            },
+                           
+                        ]
+                    }
+                }
             }
         }, {
             headers: {

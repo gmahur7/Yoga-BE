@@ -158,6 +158,7 @@ const authUser = asyncHandler(async (req, res) => {
             genQRCode(`${domain}/login/${referCode}#register`, referCode)
 
             const whatsappVerificationToken = generateToken(phoneNumber)
+            // console.log("wp: ",whatsappVerificationToken)
 
             user = await User.create({
                 phoneNumber: `${countryCode}${phoneNumber}`,
@@ -177,7 +178,7 @@ const authUser = asyncHandler(async (req, res) => {
             //send verification whatsapp message
             const userPhoneNumber = user.phoneNumber.slice(1, user.phoneNumber)
             sendVerifyWhatsAppMessage(userPhoneNumber, user.username)
-            // whatsappVerificationSuccess(userPhoneNumber, user.username)
+            //whatsappVerificationSuccess(userPhoneNumber, user.username)
 
             if (referal) {
                 await User.updateOne(
@@ -604,6 +605,10 @@ const verifyUserWithWhatsApp = async (req, res) => {
             }); 
         }
 
+        if(user.isWhatsAppVerified){
+            return res.redirect('https://app.tandenspine.io')
+        }
+
         user.isWhatsAppVerified = true
         await user.save()
 
@@ -611,7 +616,7 @@ const verifyUserWithWhatsApp = async (req, res) => {
         const userPhoneNumber = user.phoneNumber.slice(1, user.phoneNumber)
         whatsappVerificationSuccess(userPhoneNumber, user.username)
 
-        res.redirect('https://app.tandenspine.io')
+        return res.redirect('https://app.tandenspine.io')
 
     } catch (error) {
         console.error("Error in verify User WhatsApp:", error.message);
