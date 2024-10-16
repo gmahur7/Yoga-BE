@@ -65,23 +65,30 @@ async function whatsappVerificationSuccess(to, username) {
             "fullPhoneNumber": to,
             "campaignId": camp,
             "callbackData": "Whatasapp Verification Message",
-            "type": "InteractiveButton",
+            "type": "InteractiveList",
             "data": {
                 "message": {
-                    "type": "button",
+                    "type": "list",
                     "body": {
-                        "text": "Hello "+username+", Your Whatapp Verifiaction is successfull. Welcome to Tanden Spine. \n\n Thank You For Verification. \n \n Start your conversation by clicking the Hi button below."
+                        "text": "Hello " + username + ", Your Whatapp Verifiaction is successfull. Welcome to Tanden Spine. \n\n Thank You For Verification. \n \n Start your conversation by clicking the Hi button below."
                     },
                     "action": {
-                        "buttons": [
+                        "button": "View Specializations",
+                        "sections": [
                             {
-                                "type": "reply",
-                                "reply": {
-                                    "id": "id1",
-                                    "title": "Hi"
-                                }
-                            },
-                           
+                                "title": "Doctors Specializations",
+                                "rows": [
+                                    { "id": "specialization1", "title": "Back Pain",  },
+                                    { "id": "specialization2", "title": "Shoulder Pain",  },
+                                    { "id": "specialization3", "title": "Liver Problems",  },
+                                    { "id": "specialization4", "title": "Heart Issues",  },
+                                    { "id": "specialization5", "title": "Kidney Problems",  },
+                                    { "id": "specialization6", "title": "Diabetes",  },
+                                    { "id": "specialization7", "title": "Arthritis",  },
+                                    { "id": "specialization8", "title": "Neurology",  },
+                                    { "id": "specialization9", "title": "Skin Problems", }
+                                ]
+                            }
                         ]
                     }
                 }

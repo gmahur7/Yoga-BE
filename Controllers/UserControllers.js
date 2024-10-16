@@ -178,7 +178,7 @@ const authUser = asyncHandler(async (req, res) => {
             //send verification whatsapp message
             const userPhoneNumber = user.phoneNumber.slice(1, user.phoneNumber)
             sendVerifyWhatsAppMessage(userPhoneNumber, user.username)
-            //whatsappVerificationSuccess(userPhoneNumber, user.username)
+            // whatsappVerificationSuccess(userPhoneNumber, user.username)
 
             if (referal) {
                 await User.updateOne(
