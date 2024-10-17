@@ -79,9 +79,9 @@ function verifyWebhookSignature(req, res, next) {
 // Webhook endpoint to receive messages
 app.post('/webhook', verifyWebhookSignature, (req, res) => {
   const { message,customer } = req.body.data;
-  console.log(customer)
-  console.log(customer.traits)
-  console.log(JSON.stringify(customer.traits,null,2))
+  console.log(message)
+
+  console.log("body: "+req.body)
 
   // messages.forEach(message => {
   //   console.log(`Received message from ${message.from}: ${message.text.body}`);
