@@ -191,6 +191,18 @@ const authUser = asyncHandler(async (req, res) => {
                     }
                 );
             }
+
+            return res.status(201).json({
+                success:true,
+                message:"Verify Whatsapp"
+            })
+        }
+
+        if(!user.isWhatsAppVerified){
+            return res.status(202).json({
+                success:true,
+                 message:"Verify Whatsapp"
+            })
         }
 
         const token = generateToken(user._id);
@@ -221,6 +233,7 @@ const authUser = asyncHandler(async (req, res) => {
 
         return res.status(200).json({
             success: true,
+            message:"Login successfull",
             user: userDetails,
             token,
             referal: refers ? refers : [],
