@@ -36,6 +36,7 @@ const cors = require('cors')
 const cookieParser = require('cookie-parser');
 const { isAuthenticated } = require('./Helpers/JWT_Auth')
 const UserModel = require('./Models/UserModel')
+const { whatsappVerificationSuccess } = require('./Helpers/Interakt')
 
 const port = process.env.PORT || 5000
 
@@ -94,6 +95,7 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
 
 app.post('/webhook', async (req, res) => {
   const { message, mobile } = req.body;
+  console.log(req.body)
   try {
     const user = await UserModel.findOne({ phoneNumber: `+${mobile}` })
     if (!user) {
