@@ -35,6 +35,7 @@ const videoRoutes = require('./Routes/VideosRoutes')
 const cors = require('cors')
 const cookieParser = require('cookie-parser');
 const { isAuthenticated } = require('./Helpers/JWT_Auth')
+const UserModel = require('./Models/UserModel')
 
 const port = process.env.PORT || 5000
 
@@ -91,11 +92,29 @@ const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
 //   res.sendStatus(200);
 // });
 
-app.post('/webhook', (req, res) => {
+app.post('/webhook', async (req, res) => {
+  const { message, mobile } = req.body;
+  try {
+    const user = await UserModel.findOne({ phoneNumber: `+${mobile}` })
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      })
+    }
 
-  console.log(req.body)
-  console.log(JSON.stringify(req.body,null,2))
-  res.send("done")
+    if (/^verify$/i.test(message)) {
+      user.isWhatsAppVerified=true;
+      await user.save();
+      whatsappVerificationSuccess(mobile, user.username)
+    }
+
+    return res.status(200)
+
+  } catch (error) {
+    console.log("error in webhook: ",error)
+    res.status(500)
+  }
 });
 
 //---------------------------USER ROUTES------------------------------------------------
