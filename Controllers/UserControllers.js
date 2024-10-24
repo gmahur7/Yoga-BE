@@ -147,10 +147,10 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 const authUser = asyncHandler(async (req, res) => {
-    const { phoneNumber, name, code, countryCode,verificationDone } = req.body
+    const { phoneNumber, name, code, countryCode, verificationDone } = req.body
     try {
         let user;
-        user = await User.findOne({ phoneNumber: verificationDone?phoneNumber:`${countryCode}${phoneNumber}` })
+        user = await User.findOne({ phoneNumber: verificationDone ? phoneNumber : `${countryCode}${phoneNumber}` })
         const referal = await User.findOne({ "refers.code": code })
 
         if (!user) {
@@ -194,16 +194,16 @@ const authUser = asyncHandler(async (req, res) => {
             return res.status(201).json({
                 success: true,
                 message: "Verify Whatsapp",
-                user:user
+                user: user
             })
         }
-        
+
         const userDetails = await UserModel.findById(user._id).select('-password')
         if (!user.isWhatsAppVerified) {
             return res.status(202).json({
                 success: true,
                 message: "Verify Whatsapp",
-                user:userDetails
+                user: userDetails
             })
         }
 
@@ -737,7 +737,7 @@ const updateUserProfile = async (req, res) => {
 };
 
 const markAttendance = async (req, res) => {
-    const { toMarkDate,user } = req.body;
+    const { toMarkDate, user } = req.body;
     const currentUser = req.user || user;
 
     if (!currentUser) {
@@ -755,11 +755,17 @@ const markAttendance = async (req, res) => {
     }
 
     try {
+
+        const dateStr = toMarkDate;
+        const date = new Date(dateStr);
+        const formattedDate = date.toISOString().replace('Z', '+00:00');
+        const isoDate = new Date(formattedDate);
+
         const update = await UserModel.findByIdAndUpdate(
             currentUser._id,
             {
                 $push: {
-                    attendence: toMarkDate
+                    attendence: isoDate
                 }
             },
             {

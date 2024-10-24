@@ -106,7 +106,6 @@ const joinMeeting = async (req, res) => {
         });
 
         if (!isTodayPresent) {
-            console.log("in");
             user.attendence.push(todayDateOnly); // Push only the date part (without time)
             await user.save();
         }
