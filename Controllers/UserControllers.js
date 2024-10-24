@@ -147,17 +147,17 @@ const registerUser = asyncHandler(async (req, res) => {
 })
 
 const authUser = asyncHandler(async (req, res) => {
-    const { phoneNumber, name, code, countryCode } = req.body
+    const { phoneNumber, name, code, countryCode,verificationDone } = req.body
     try {
         let user;
-        user = await User.findOne({ phoneNumber: `${countryCode}${phoneNumber}` })
+        user = await User.findOne({ phoneNumber: verificationDone?phoneNumber:`${countryCode}${phoneNumber}` })
         const referal = await User.findOne({ "refers.code": code })
 
         if (!user) {
             const referCode = genCode(name);
             genQRCode(`${domain}/login/${referCode}#register`, referCode)
 
-            const whatsappVerificationToken = generateToken(phoneNumber)
+            // const whatsappVerificationToken = generateToken(phoneNumber)
             // console.log("wp: ",whatsappVerificationToken)
 
             user = await User.create({
@@ -172,13 +172,12 @@ const authUser = asyncHandler(async (req, res) => {
                 isFirstLogin: false,
                 isFirstPayment: true,
                 qrcode: referCode + "_qrcode.png",
-                whatsappVerificationToken
+                // whatsappVerificationToken
             })
 
             //send verification whatsapp message
-            const userPhoneNumber = user.phoneNumber.slice(1, user.phoneNumber)
-            sendVerifyWhatsAppMessage(userPhoneNumber, user.username)
-            // whatsappVerificationSuccess(userPhoneNumber, user.username)
+            // const userPhoneNumber = user.phoneNumber.slice(1, user.phoneNumber)
+            // sendVerifyWhatsAppMessage(userPhoneNumber, user.username)
 
             if (referal) {
                 await User.updateOne(
@@ -193,15 +192,18 @@ const authUser = asyncHandler(async (req, res) => {
             }
 
             return res.status(201).json({
-                success:true,
-                message:"Verify Whatsapp"
+                success: true,
+                message: "Verify Whatsapp",
+                user:user
             })
         }
-
-        if(!user.isWhatsAppVerified){
+        
+        const userDetails = await UserModel.findById(user._id).select('-password')
+        if (!user.isWhatsAppVerified) {
             return res.status(202).json({
-                success:true,
-                 message:"Verify Whatsapp"
+                success: true,
+                message: "Verify Whatsapp",
+                user:userDetails
             })
         }
 
@@ -226,14 +228,13 @@ const authUser = asyncHandler(async (req, res) => {
         //     );
         // }
 
-        const userDetails = await UserModel.findById(user._id).select('-password')
         const refers = await UserModel.find({ referBy: user._id })
         const liveusers = (await UserModel.find()).length
 
 
         return res.status(200).json({
             success: true,
-            message:"Login successfull",
+            message: "Login successfull",
             user: userDetails,
             token,
             referal: refers ? refers : [],
@@ -609,16 +610,16 @@ const verifyUserWithWhatsApp = async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ phoneNumber:`+${phoneNumber}` });
+        const user = await User.findOne({ phoneNumber: `+${phoneNumber}` });
 
         if (!user) {
             return res.status(404).json({
                 success: false,
                 message: "User not found"
-            }); 
+            });
         }
 
-        if(user.isWhatsAppVerified){
+        if (user.isWhatsAppVerified) {
             return res.redirect('https://app.tandenspine.io')
         }
 
@@ -736,8 +737,8 @@ const updateUserProfile = async (req, res) => {
 };
 
 const markAttendance = async (req, res) => {
-    const { toMarkDate } = req.body;
-    const currentUser = req.user;
+    const { toMarkDate,user } = req.body;
+    const currentUser = req.user || user;
 
     if (!currentUser) {
         return res.status(404).json({

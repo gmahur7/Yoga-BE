@@ -2,7 +2,7 @@ require('dotenv').config()
 const express = require('express')
 const mongoDBConnect = require('./Database/dbConnect')
 const app = express()
-const { setupSocket } = require('./socket')
+const { setupSocket, USERS } = require('./socket')
 const path = require('path')
 mongoDBConnect()
 const bodyParser = require('body-parser');
@@ -58,7 +58,7 @@ app.get('/', (req, resp) => {
   resp.send('Hello World!')
 })
 
-const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
+// const WEBHOOK_SECRET = process.env.WEBHOOK_SECRET
 
 // Verify webhook signature
 // function verifyWebhookSignature(req, res, next) {
@@ -97,7 +97,7 @@ app.post('/webhook', async (req, res) => {
   const { message, mobile } = req.body;
   console.log(req.body)
   try {
-    const user = await UserModel.findOne({ phoneNumber: `+${mobile}` })
+    const user = await UserModel.findOne({ phoneNumber: `+${mobile}` }).select("-password")
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -106,15 +106,26 @@ app.post('/webhook', async (req, res) => {
     }
 
     if (/^verify$/i.test(message)) {
-      user.isWhatsAppVerified=true;
-      await user.save();
-      whatsappVerificationSuccess(mobile, user.username)
+      if (user.isWhatsAppVerified) res.status(200)
+      else {
+        user.isWhatsAppVerified = true;
+        await user.save();
+        // whatsappVerificationSuccess(mobile, user.username)
+        const socketId = USERS[user._id];
+        console.log("socketid: ",socketId)
+        if (socketId) {
+          // io.to(socketId).emit('whatsapp_verified', { 
+          //   message: 'Your WhatsApp has been successfully verified.',
+          //   user:user
+          //  });
+        }
+      }
     }
 
     return res.status(200)
 
   } catch (error) {
-    console.log("error in webhook: ",error)
+    console.log("error in webhook: ", error)
     res.status(500)
   }
 });

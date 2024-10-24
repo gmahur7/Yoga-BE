@@ -1,5 +1,5 @@
-const USERS = {};
 const ADMINS = {};
+const USERS = {};
 
 exports.setupSocket = (io) => {
 
@@ -70,3 +70,5 @@ exports.setupSocket = (io) => {
         });
     };
 }
+
+module.exports.USERS = USERS;
